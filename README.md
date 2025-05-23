@@ -1,4 +1,4 @@
-# GNODEVAE: A Graph-Based ODE-VAE for Enhancing Clustering of Single-Cell Data
+# GNODEVAE: A Graph-Based ODE-VAE Enhances Clustering of Single-Cell Data
 
 ## Graphical Abstract
 
