@@ -150,7 +150,6 @@ class envMixin:
             - D_B: Davies-Bouldin Index.  
             - P_C: Average pairwise correlation.  
         """  
-        n = latent.shape[1]  
         labels = self._calc_label(latent)  
         scores = self._metrics(latent, labels)  
         return scores  
@@ -221,13 +220,15 @@ class envMixin:
             - D_B: Davies-Bouldin Index.  
             - P_C: Average pairwise correlation.  
         """  
-        ARI = adjusted_mutual_info_score(self.labels[self.idx], labels)  
-        NMI = normalized_mutual_info_score(self.labels[self.idx], labels)  
+        true_labels = self.labels[self.idx]
+        ARI = adjusted_mutual_info_score(true_labels, labels)  
+        NMI = normalized_mutual_info_score(true_labels, labels)  
         ASW = silhouette_score(latent, labels)  
         C_H = calinski_harabasz_score(latent, labels)  
         D_B = davies_bouldin_score(latent, labels)  
         P_C = self._calc_corr(latent)  
         return ARI, NMI, ASW, C_H, D_B, P_C
+
 
 class scMixin:  
     def _preprocess(  

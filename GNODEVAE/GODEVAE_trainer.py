@@ -133,10 +133,10 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         edge_index = cd.edge_index  
         edge_weight = cd.edge_attr  
         if self.godevae.encoder_type == 'linear':  
-            q_z = self.godevae.encoder(states)[0]
+            q_z, q_m, _, t = self.godevae.encoder(states)
         else:    
-            q_z = self.godevae.encoder(states, edge_index, edge_weight)[0]
-        return q_z.cpu().numpy()  
+            q_z, q_m, _, t = self.godevae.encoder(states, edge_index, edge_weight)
+        return q_m.cpu().numpy()  
 
     @torch.no_grad()  
     def take_odelatent(  
@@ -154,13 +154,13 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         edge_weight = cd.edge_attr  
         
         if self.godevae.encoder_type == 'linear':  
-            q_z, _, _, t = self.godevae.encoder(states)
+            q_z, q_m, _, t = self.godevae.encoder(states)
         else:    
-            q_z, _, _, t = self.godevae.encoder(states, edge_index, edge_weight) 
+            q_z, q_m, _, t = self.godevae.encoder(states, edge_index, edge_weight) 
                     
         sort_t, sort_idx, sort_ridx = np.unique(t.cpu(), return_index=True, return_inverse=True)  
         sort_t = torch.tensor(sort_t).to(self.device)  
-        q_z_sort = q_z[sort_idx]  
+        q_z_sort = q_m[sort_idx]  
 
         q_z_ode = []  
         if batch_size is None:  
@@ -229,7 +229,7 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         idx1, idx2 = self.godevae.idx1, self.godevae.idx2  
         
         recon_loss_ode = self._recon_loss(l[idx1][idx2], states[idx1][idx2], pred_x_ode)  
-        z_div = F.mse_loss(q_z[idx1][idx2], q_z_ode, reduction="none").sum(-1).mean()  
+        z_div = F.mse_loss(q_m[idx1][idx2], q_z_ode, reduction="none").sum(-1).mean()  
 
         # Total loss  
         loss = recon_loss + kl_loss + adj_loss + recon_loss_ode + z_div  
