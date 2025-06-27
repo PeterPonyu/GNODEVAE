@@ -7,9 +7,54 @@ from torch_geometric.data import Data
 import numpy as np
 from typing import List, Tuple, Optional
 
-class Trainer_r(scviMixin, adjMixin):  
+class _BaseTrainer(scviMixin, adjMixin):
+    """Base trainer class with shared logic."""
+    def __init__(self, model, lr, beta, graph, device):
+        self.gvae = model.to(device)
+        self.opt = torch.optim.Adam(self.gvae.parameters(), lr=lr)
+        self.beta = beta
+        self.graph = graph
+        self.loss = []
+        self.device = device
+
+    def take_latent(self, cd: Data) -> np.ndarray:
+        """
+        Extract the latent representation from the GraphVAE model.
+
+        Parameters
+        ----------
+        cd : torch_geometric.data.Data
+            Input graph data containing node features (`x`), edge indices (`edge_index`),
+            and edge attributes (`edge_attr`).
+
+        Returns
+        -------
+        np.ndarray
+            Latent representation of the input data, shape (num_nodes, latent_dim).
+        """
+        states = cd.x
+        edge_index = cd.edge_index
+        edge_weight = cd.edge_attr
+        res = self.gvae(states, edge_index, edge_weight)
+        q_z = res[0]
+        return q_z.detach().cpu().numpy()
+
+    def _kl_loss(self, q_m, q_s):
+        p_m = torch.zeros_like(q_m)
+        p_s = torch.zeros_like(q_s)
+        return self.beta * self._normal_kl(q_m, q_s, p_m, p_s).sum(-1).mean()
+
+    def _adj_loss(self, adj, pred_a):
+        return self.graph * F.binary_cross_entropy_with_logits(pred_a, adj)
+
+    def _optimize(self, loss):
+        self.opt.zero_grad()
+        loss.backward()
+        self.opt.step()
+
+class Trainer_r(_BaseTrainer):  
     """  
-    Trainer class for training the GraphVAE model.  
+    Trainer class for training the GraphVAE_r model.  
 
     This class combines the functionality of `scviMixin` and `adjMixin` to train  
     a Graph Variational Autoencoder (GraphVAE) model. It handles the forward pass,  
@@ -57,8 +102,8 @@ class Trainer_r(scviMixin, adjMixin):
 
     Attributes  
     ----------  
-    gvae : GraphVAE  
-        The GraphVAE model instance.  
+    gvae : GraphVAE_r
+        The GraphVAE_r model instance.  
     opt : torch.optim.Adam  
         Optimizer for training the model.  
     beta : float  
@@ -94,7 +139,7 @@ class Trainer_r(scviMixin, adjMixin):
         device: torch.device = torch.device('cuda'),  
     ):  
         
-        self.gvae = GraphVAE_r(  
+        model = GraphVAE_r(  
             input_dim,  
             hidden_dim,  
             latent_dim,  
@@ -110,37 +155,8 @@ class Trainer_r(scviMixin, adjMixin):
             alpha,
             threshold,
             sparse_threshold
-        ).to(device)  
-        self.opt = torch.optim.Adam(self.gvae.parameters(), lr=lr)  
-        self.beta = beta  
-        self.graph = graph  
-        self.loss: List[Tuple[float, float, float]] = []  
-        self.device = device  
-
-    def take_latent(  
-        self,   
-        cd: Data  
-    ) -> np.ndarray:  
-        """  
-        Extract the latent representation from the GraphVAE model.  
-
-        Parameters  
-        ----------  
-        cd : torch_geometric.data.Data  
-            Input graph data containing node features (`x`), edge indices (`edge_index`),  
-            and edge attributes (`edge_attr`).  
-
-        Returns  
-        -------  
-        np.ndarray  
-            Latent representation of the input data, shape (num_nodes, latent_dim).  
-        """  
-        states = cd.x  
-        edge_index = cd.edge_index  
-        edge_weight = cd.edge_attr  
-        res = self.gvae(states, edge_index, edge_weight)
-        q_z = res[0]
-        return q_z.detach().cpu().numpy()  
+        )
+        super().__init__(model, lr, beta, graph, device)
 
     def update(  
         self,   
@@ -162,17 +178,14 @@ class Trainer_r(scviMixin, adjMixin):
         -------  
         None  
         """  
-        # Extract data from the input graph  
         states = cd.x  
         edge_index = cd.edge_index  
         edge_weight = cd.edge_attr  
         
-        # Forward pass through the GraphVAE model
         q_z, q_m, q_s, pred_a, pred_x = self.gvae(states, edge_index, edge_weight)  
-        # Scale predicted features by the sum of the input features
+        
         l = states.sum(-1).view(-1, 1)
         recon_loss = self._recon_loss(l, states, pred_x)  
-
         kl_loss = self._kl_loss(q_m, q_s)
         
         num_nodes = states.size(0)  
@@ -180,13 +193,8 @@ class Trainer_r(scviMixin, adjMixin):
         adj_loss = self._adj_loss(adj, pred_a)
 
         loss = recon_loss + kl_loss + adj_loss
-        # Store the loss values  
         self.loss.append((recon_loss.item(), kl_loss.item(), adj_loss.item()))
-    
-        # Backpropagation and optimization step  
-        self.opt.zero_grad()  
-        loss.backward()  
-        self.opt.step()  
+        self._optimize(loss)
 
     def _recon_loss(
         self,
@@ -195,34 +203,11 @@ class Trainer_r(scviMixin, adjMixin):
         pred_x
     ):
         pred_x = pred_x * l  
-        # Compute reconstruction loss for node features  
         disp = torch.exp(self.gvae.feature_decoder.disp)  
         recon_loss = -self._log_nb(states, pred_x, disp).sum(-1).mean()
         return recon_loss
 
-    def _kl_loss(
-        self,
-        q_m,
-        q_s
-    ):
-        # Compute KL divergence for the latent space  
-        p_m = torch.zeros_like(q_m)  
-        p_s = torch.zeros_like(q_s)  
-        kl_loss = self.beta * self._normal_kl(q_m, q_s, p_m, p_s).sum(-1).mean()
-        return kl_loss
-
-    def _adj_loss(
-        self,
-        adj,
-        pred_a
-    ):
-        # Compute graph reconstruction loss  
-        adj_loss = self.graph * F.binary_cross_entropy_with_logits(pred_a, adj)
-        return adj_loss
-        
-
-
-class Trainer(scviMixin, adjMixin):  
+class Trainer(_BaseTrainer):  
     """  
     Trainer class for training the GraphVAE model.  
 
@@ -308,7 +293,7 @@ class Trainer(scviMixin, adjMixin):
     ):  
         self.interpretable = interpretable
         if interpretable:
-            self.gvae = iGraphVAE(
+            model = iGraphVAE(
                 input_dim,  
                 hidden_dim,  
                 latent_dim,  
@@ -322,9 +307,9 @@ class Trainer(scviMixin, adjMixin):
                 use_residual,
                 Cheb_k,
                 alpha
-            ).to(device)
+            )
         else:
-            self.gvae = GraphVAE(  
+            model = GraphVAE(  
                 input_dim,  
                 hidden_dim,  
                 latent_dim,  
@@ -337,37 +322,8 @@ class Trainer(scviMixin, adjMixin):
                 use_residual,
                 Cheb_k,
                 alpha
-            ).to(device)  
-        self.opt = torch.optim.Adam(self.gvae.parameters(), lr=lr)  
-        self.beta = beta  
-        self.graph = graph  
-        self.loss: List[Tuple[float, float, float]] = []  
-        self.device = device  
-
-    def take_latent(  
-        self,   
-        cd: Data  
-    ) -> np.ndarray:  
-        """  
-        Extract the latent representation from the GraphVAE model.  
-
-        Parameters  
-        ----------  
-        cd : torch_geometric.data.Data  
-            Input graph data containing node features (`x`), edge indices (`edge_index`),  
-            and edge attributes (`edge_attr`).  
-
-        Returns  
-        -------  
-        np.ndarray  
-            Latent representation of the input data, shape (num_nodes, latent_dim).  
-        """  
-        states = cd.x  
-        edge_index = cd.edge_index  
-        edge_weight = cd.edge_attr  
-        res = self.gvae(states, edge_index, edge_weight)
-        q_z = res[0]
-        return q_z.detach().cpu().numpy()  
+            )
+        super().__init__(model, lr, beta, graph, device)
 
     def update(  
         self,   
@@ -389,15 +345,12 @@ class Trainer(scviMixin, adjMixin):
         -------  
         None  
         """  
-        # Extract data from the input graph  
         states = cd.x  
         edge_index = cd.edge_index  
         edge_weight = cd.edge_attr  
         
         if self.interpretable:
-            # Forward pass through the iGraphVAE model  
             q_z, q_m, q_s, pred_a, pred_x, i_q_z, pred_ia, pred_ix = self.gvae(states, edge_index, edge_weight)
-            # Scale predicted features by the sum of the input features
             l = states.sum(-1).view(-1, 1)
             recon_loss = self._recon_loss(l, states, pred_x)
             irecon_loss = self._recon_loss(l, states, pred_ix)
@@ -410,7 +363,6 @@ class Trainer(scviMixin, adjMixin):
             iadj_loss = self._adj_loss(adj, pred_ia)
 
             loss = recon_loss + kl_loss + adj_loss + irecon_loss  + iadj_loss
-            # Store the loss values  
             self.loss.append((recon_loss.item(),
                               kl_loss.item(),
                               adj_loss.item(),
@@ -419,12 +371,9 @@ class Trainer(scviMixin, adjMixin):
                              ))
             
         else:
-            # Forward pass through the GraphVAE model
             q_z, q_m, q_s, pred_a, pred_x = self.gvae(states, edge_index, edge_weight)  
-            # Scale predicted features by the sum of the input features
             l = states.sum(-1).view(-1, 1)
             recon_loss = self._recon_loss(l, states, pred_x)  
-
             kl_loss = self._kl_loss(q_m, q_s)
             
             num_nodes = states.size(0)  
@@ -432,13 +381,9 @@ class Trainer(scviMixin, adjMixin):
             adj_loss = self._adj_loss(adj, pred_a)
 
             loss = recon_loss + kl_loss + adj_loss
-            # Store the loss values  
             self.loss.append((recon_loss.item(), kl_loss.item(), adj_loss.item()))
         
-        # Backpropagation and optimization step  
-        self.opt.zero_grad()  
-        loss.backward()  
-        self.opt.step()  
+        self._optimize(loss)
 
     def _recon_loss(
         self,
@@ -447,31 +392,6 @@ class Trainer(scviMixin, adjMixin):
         pred_x
     ):
         pred_x = pred_x * l  
-        # Compute reconstruction loss for node features  
         disp = torch.exp(self.gvae.x_decoder.disp)  
         recon_loss = -self._log_nb(states, pred_x, disp).sum(-1).mean()
         return recon_loss
-
-    def _kl_loss(
-        self,
-        q_m,
-        q_s
-    ):
-        # Compute KL divergence for the latent space  
-        p_m = torch.zeros_like(q_m)  
-        p_s = torch.zeros_like(q_s)  
-        kl_loss = self.beta * self._normal_kl(q_m, q_s, p_m, p_s).sum(-1).mean()
-        return kl_loss
-
-    def _adj_loss(
-        self,
-        adj,
-        pred_a
-    ):
-        # Compute graph reconstruction loss  
-        adj_loss = self.graph * F.binary_cross_entropy_with_logits(pred_a, adj)
-        return adj_loss
-        
-    
-    
-        

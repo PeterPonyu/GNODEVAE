@@ -22,7 +22,7 @@ class BaseAgent:
         start_time = time.time()
 
         try:
-            with tqdm.tqdm(total=epochs, desc='Fitting', ncols=200, disable=silent) as pbar:
+            with tqdm.tqdm(total=epochs, desc='Fitting', ncols=150, disable=silent, miniters=update_steps) as pbar:
                 for i in range(epochs):
                     step_start_time = time.time()
 
@@ -59,8 +59,8 @@ class BaseAgent:
                             'D_B': f'{db:.2f}',
                             'P_C': f'{pc:.2f}',
                             'Step Time': f'{st:.2f}s',
-                            'CPU Mem': f'{cm:.0f}MB',
-                            'GPU Mem': f'{gm:.0f}MB',
+                            # 'CPU Mem': f'{cm:.0f}MB',
+                            # 'GPU Mem': f'{gm:.0f}MB',
                         }, refresh=False)
                     pbar.update(1)
 
@@ -78,13 +78,13 @@ class BaseAgent:
             latent = self.take_latent(cd)
             ls_l.append(latent)
         latent = np.vstack(ls_l)
-        # Assuming self.idx and self.n_obs are available from Env/Env_r
+        return latent
+
+    def get_latent(self) -> np.ndarray:
+        latent = self._get_latent_representation()
         lut = dict(zip(self.idx, latent))
         latent_ordered = np.vstack([lut[i] for i in range(self.n_obs)])
         return latent_ordered
-
-    def get_latent(self) -> np.ndarray:
-        return self._get_latent_representation()
 
     def score_final(self) -> None:
         latent = self._get_latent_representation()
