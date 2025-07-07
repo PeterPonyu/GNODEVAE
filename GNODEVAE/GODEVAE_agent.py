@@ -13,8 +13,23 @@ from torch_geometric.data import Data
 class GNODEVAE_agent_base:
     """Base class for GNODEVAE agents, providing common fitting and utility methods."""
 
-    def __init__(self, *, scale1: float = 0.5, scale2: float = 0.5, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *, scale1: float = 0.5, scale2: float = 0.5,
+                 w_recon: float = 1.0,
+                 w_kl: float = 1.0,
+                 w_adj: float = 1.0,
+                 w_recon_ode: float = 1.0,
+                 w_z_div: float = 1.0,
+                 latent_type: str = 'q_m',
+                 **kwargs):
+        super().__init__(
+            w_recon=w_recon,
+            w_kl=w_kl,
+            w_adj=w_adj,
+            w_recon_ode=w_recon_ode,
+            w_z_div=w_z_div,
+            latent_type=latent_type,
+            **kwargs
+        )
         self.scale1 = scale1
         self.scale2 = scale2
 
@@ -126,9 +141,15 @@ class GNODEVAE_agent_subgraph(GNODEVAE_agent_base, GNODEVAE_Env_Subgraph):
         lr: float = 1e-4,
         beta: float = 1.0,
         graph: float = 1.0,
+        w_recon: float = 1.0,
+        w_kl: float = 1.0,
+        w_adj: float = 1.0,
+        w_recon_ode: float = 1.0,
+        w_z_div: float = 1.0,
         device: torch.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
         scale1: float = .5,
         scale2: float = .5,
+        latent_type: str = 'q_m',
         # Subgraph-specific parameters
         subgraph_size: int = 512,
         num_subgraphs_per_epoch: int = 10,
@@ -161,16 +182,22 @@ class GNODEVAE_agent_subgraph(GNODEVAE_agent_base, GNODEVAE_Env_Subgraph):
             lr=lr,
             beta=beta,
             graph=graph,
+            w_recon=w_recon,
+            w_kl=w_kl,
+            w_adj=w_adj,
+            w_recon_ode=w_recon_ode,
+            w_z_div=w_z_div,
             device=device,
             scale1=scale1,
             scale2=scale2,
+            latent_type=latent_type,
             subgraph_size=subgraph_size,
             num_subgraphs_per_epoch=num_subgraphs_per_epoch,
             sampling_method=sampling_method,
             **kwargs
         )
 
-    def _get_latent_representation(self, latent_type: str) -> np.ndarray:
+    def _get_latent_representation(self, latent_name: str) -> np.ndarray:
         """Helper to get latent representations for the full graph."""
         self.godevae.eval()
         with torch.no_grad():
@@ -183,7 +210,7 @@ class GNODEVAE_agent_subgraph(GNODEVAE_agent_base, GNODEVAE_Env_Subgraph):
             )
             
             # Get the appropriate latent representation method
-            take_latent_method = getattr(self, f"take_{latent_type}")
+            take_latent_method = getattr(self, f"take_{latent_name}")
             
             # Perform a forward pass on the full graph
             latent = take_latent_method(full_graph_data)
@@ -252,9 +279,15 @@ class GNODEVAE_agent_r(GNODEVAE_agent_base, GNODEVAE_Env_r):
         lr: float = 1e-4,
         beta: float = 1.0,
         graph: float = 1.0,
-        device: torch.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
+        w_recon: float = 1.0,
+        w_kl: float = 1.0,
+        w_adj: float = 1.0,
+        w_recon_ode: float = 1.0,
+        w_z_div: float = 1.0,
         scale1: float = .5,
         scale2: float = .5,
+        latent_type: str = 'q_m',
+        device: torch.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
         # Partition-specific parameters
         num_parts: int = 10,
         **kwargs,
@@ -285,36 +318,47 @@ class GNODEVAE_agent_r(GNODEVAE_agent_base, GNODEVAE_Env_r):
             lr=lr,
             beta=beta,
             graph=graph,
+            w_recon=w_recon,
+            w_kl=w_kl,
+            w_adj=w_adj,
+            w_recon_ode=w_recon_ode,
+            w_z_div=w_z_div,
             device=device,
             scale1=scale1,
             scale2=scale2,
+            latent_type=latent_type,
             num_parts=num_parts,
             **kwargs
         )
 
-    def _get_latent_representation(self, latent_type: str) -> np.ndarray:
+    def _get_latent_representation(self, latent_name: str) -> np.ndarray:
         """Helper to get latent representations, ensuring correct ordering."""
         ls_l = []
         self.godevae.eval()
         with torch.no_grad():
-            take_latent_method = getattr(self, f"take_{latent_type}")
+            take_latent_method = getattr(self, f"take_{latent_name}")
             for cd in self.cdata:
                 latent = take_latent_method(cd)
                 ls_l.append(latent)
         latent = np.vstack(ls_l)
+        return latent
+
+    def get_latent(self) -> np.ndarray:
+        """Gets the base latent representation for all cells."""
+        latent = self._get_latent_representation("latent")
         # Reorder according to original cell indices
         lut = dict(zip(self.idx, latent))
         latent_ordered = np.vstack([lut[i] for i in range(self.n_obs)])
         return latent_ordered
-
-    def get_latent(self) -> np.ndarray:
-        """Gets the base latent representation for all cells."""
-        return self._get_latent_representation("latent")
-
+        
     def get_odelatent(self) -> np.ndarray:
         """Gets the ODE-evolved latent representation for all cells."""
-        return self._get_latent_representation("odelatent")
-
+        latent = self._get_latent_representation("odelatent")
+        # Reorder according to original cell indices
+        lut = dict(zip(self.idx, latent))
+        latent_ordered = np.vstack([lut[i] for i in range(self.n_obs)])
+        return latent_ordered
+        
     def get_mix_latent(self) -> np.ndarray:
         """Gets the mixed latent representation for all cells."""
         latent = self.get_latent()
@@ -324,17 +368,18 @@ class GNODEVAE_agent_r(GNODEVAE_agent_base, GNODEVAE_Env_r):
 
     def score_final(self) -> None:
         """Calculates and stores the final score on the base latent space."""
-        latent = self.get_latent()
+        latent = self._get_latent_representation("latent")
         self.final_score = self._calc_score(latent)
 
     def score_odefinal(self) -> None:
         """Calculates and stores the final score on the ODE-evolved latent space."""
-        latent = self.get_odelatent()
+        latent = self._get_latent_representation("odelatent")
         self.ode_final_score = self._calc_score(latent)
 
     def score_mixfinal(self) -> None:
         """Calculates and stores the final score on the mixed latent space."""
-        latent = self.get_mix_latent()
+        latent = self._get_latent_representation("latent")
+        odelatent = self._get_latent_representation("odelatent")
         self.mix_final_score = self._calc_score(latent)
 
         

@@ -97,7 +97,13 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         lr: float = 1e-4,  
         beta: float = 1.0,  
         graph: float = 1.0,  
+        w_recon: float = 1.0,
+        w_kl: float = 1.0,
+        w_adj: float = 1.0,
+        w_recon_ode: float = 1.0,
+        w_z_div: float = 1.0,
         device: torch.device = torch.device("cuda"),  
+        latent_type: str = 'q_m',
     ):  
         self.godevae = GODEVAE_r(  
             input_dim,  
@@ -121,13 +127,24 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         self.opt = torch.optim.Adam(self.godevae.parameters(), lr=lr)  
         self.beta = beta  
         self.graph = graph  
+        self.w_recon = w_recon
+        self.w_kl = w_kl
+        self.w_adj = w_adj
+        self.w_recon_ode = w_recon_ode
+        self.w_z_div = w_z_div
         self.loss: List[Tuple[float, float, float, float, float]] = []  
         self.device = device  
+        self.latent_type = latent_type
 
     @torch.no_grad()  
     def take_latent(self, cd: Data) -> np.ndarray:  
         """  
         Extract latent variables from the encoder.  
+
+        Parameters
+        ----------
+        cd : Data
+            Input data.
         """  
         states = cd.x  
         edge_index = cd.edge_index  
@@ -136,7 +153,12 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
             q_z, q_m, _, t = self.godevae.encoder(states)
         else:    
             q_z, q_m, _, t = self.godevae.encoder(states, edge_index, edge_weight)
-        return q_m.cpu().numpy()  
+        if self.latent_type == 'q_m':
+            return q_m.cpu().numpy()
+        elif self.latent_type == 'q_z':
+            return q_z.cpu().numpy()
+        else:
+            raise ValueError("latent_type must be 'q_m' or 'q_z'")
 
     @torch.no_grad()  
     def take_odelatent(  
@@ -144,10 +166,21 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         cd: Data,  
         step_size: Optional[int] = None,  
         step_wise: bool = False,  
-        batch_size: Optional[int] = None,  
+        batch_size: Optional[int] = None,
     ) -> np.ndarray:  
         """  
         Extract ODE latent variables by solving the latent ODE.  
+
+        Parameters
+        ----------
+        cd : Data
+            Input data.
+        step_size : int, optional
+            Step size for the ODE solver, by default None.
+        step_wise : bool, optional
+            Whether to solve the ODE step-wise, by default False.
+        batch_size : int, optional
+            Batch size for processing, by default None.
         """  
         states = cd.x  
         edge_index = cd.edge_index  
@@ -157,10 +190,17 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
             q_z, q_m, _, t = self.godevae.encoder(states)
         else:    
             q_z, q_m, _, t = self.godevae.encoder(states, edge_index, edge_weight) 
+
+        if self.latent_type == 'q_m':
+            latent = q_m
+        elif self.latent_type == 'q_z':
+            latent = q_z
+        else:
+            raise ValueError("latent_type must be 'q_m' or 'q_z'")
                     
         sort_t, sort_idx, sort_ridx = np.unique(t.cpu(), return_index=True, return_inverse=True)  
         sort_t = torch.tensor(sort_t).to(self.device)  
-        q_z_sort = q_m[sort_idx]  
+        q_z_sort = latent[sort_idx]  
 
         q_z_ode = []  
         if batch_size is None:  
@@ -232,7 +272,11 @@ class GODEVAE_Trainer_r(scviMixin, adjMixin):
         z_div = F.mse_loss(q_m[idx1][idx2], q_z_ode, reduction="none").sum(-1).mean()  
 
         # Total loss  
-        loss = recon_loss + kl_loss + adj_loss + recon_loss_ode + z_div  
+        loss = (self.w_recon * recon_loss + 
+                self.w_kl * kl_loss + 
+                self.w_adj * adj_loss + 
+                self.w_recon_ode * recon_loss_ode + 
+                self.w_z_div * z_div)  
 
         # Store loss values  
         self.loss.append((recon_loss.item(), kl_loss.item(), adj_loss.item(), recon_loss_ode.item(), z_div.item()))  
