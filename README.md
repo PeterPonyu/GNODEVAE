@@ -36,3 +36,4 @@ When compared with six advanced single-cell analysis methods (scVI, DIP-VAE, TC-
 
 Quantitative evaluation shows GNODEVAE significantly outperforms existing methods (69.97% improvement over Palantir, 63.58% over Diffmap) in Calinski-Harabasz index, demonstrating clearer clustering and stronger category discrimination.
 
+[![DOI](https://zenodo.org/badge/988780888.svg)](https://doi.org/10.5281/zenodo.15826042)
