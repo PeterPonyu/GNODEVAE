@@ -36,7 +36,9 @@ When compared with six advanced single-cell analysis methods (scVI, DIP-VAE, TC-
 
 Quantitative evaluation shows GNODEVAE significantly outperforms existing methods (69.97% improvement over Palantir, 63.58% over Diffmap) in Calinski-Harabasz index, demonstrating clearer clustering and stronger category discrimination.
 
-[![DOI](https://zenodo.org/badge/988780888.svg)](https://doi.org/10.5281/zenodo.15826042)
+[![DOI](https://zenodo.org/badge/988780888.svg)](https://doi.org/10.5281/zenodo.15826042
+        
+        )
 
 ## Installation
 
@@ -246,24 +248,6 @@ GNODEVAE automatically computes several clustering quality metrics during traini
 - **D_B** (Davies-Bouldin Index): Average similarity between clusters
 - **P_C** (Pearson Correlation): Correlation between latent dimensions
 
-## Troubleshooting
-
-### GPU Out of Memory
-- Reduce `hidden_dim` or `latent_dim`
-- Increase `num_parts` for smaller mini-batches
-- Use a smaller number of highly variable genes (`n_var`)
-
-### Poor Clustering Performance
-- Try different `graph_type` options (GAT, Transformer, GCN)
-- Adjust `n_neighbors` for graph construction
-- Tune `beta` and `graph` loss weights
-- Increase `epochs` for longer training
-
-### Installation Issues
-- Ensure PyTorch and PyTorch Geometric versions are compatible
-- Install CUDA-compatible PyTorch for GPU support
-- Check that all dependencies are installed
-
 ## Citation
 
 If you use GNODEVAE in your research, please cite:
@@ -282,6 +266,8 @@ If you use GNODEVAE in your research, please cite:
 
 **Full Citation:**
 Fu, Z., Chen, C., Wang, S. et al. GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data. BMC Genomics 26, 767 (2025). https://doi.org/10.1186/s12864-025-11946-7
+        
+        
 
 ## License
 
