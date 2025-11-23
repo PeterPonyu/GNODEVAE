@@ -38,7 +38,6 @@ Quantitative evaluation shows GNODEVAE significantly outperforms existing method
 
 [![DOI](https://zenodo.org/badge/988780888.svg)](https://doi.org/10.5281/zenodo.15826042
         
-        )
 
 ## Installation
 
