@@ -76,9 +76,11 @@ The main dependencies include:
 
 ```python
 import scanpy as sc
-from GNODEVAE import agent_r  # For GNODEVAE with ODE
+from GNODEVAE import agent_r  # GraphVAE with refined architecture
 # OR
-from GNODEVAE import agent  # For standard GraphVAE
+from GNODEVAE import agent  # Standard GraphVAE
+# For full GNODEVAE with ODE support, use:
+# from GNODEVAE.GODEVAE_agent import GNODEVAE_agent_r
 
 # Load your single-cell data
 adata = sc.read_h5ad('your_data.h5ad')
@@ -224,7 +226,10 @@ model = agent(
 
 ```python
 # For GNODEVAE models with ODE component
-model = agent_r(adata=adata, ...)
+# Note: Use GNODEVAE_agent_r from GODEVAE_agent module for pseudo-time functionality
+from GNODEVAE.GODEVAE_agent import GNODEVAE_agent_r
+
+model = GNODEVAE_agent_r(adata=adata, ...)
 model.fit(epochs=300)
 
 # Get pseudo-time for cells

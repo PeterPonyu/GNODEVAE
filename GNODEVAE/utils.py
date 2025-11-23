@@ -108,7 +108,7 @@ class AdjToEdge:
         for i in range(adj.shape[0]):  
             # Find indices of top-k edge weights for node i
             top_k_idx = np.argpartition(adj[i], -k)[-k:]  
-            # Only keep edges above threshold
+            # Apply threshold filter to top-k edges
             mask = adj[i, top_k_idx] > self.threshold  
             sparse_adj[i, top_k_idx] = adj[i, top_k_idx] * mask  
         return sparse_adj  

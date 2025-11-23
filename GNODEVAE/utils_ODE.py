@@ -52,7 +52,8 @@ def get_step_size(step_size: Optional[float], t1: float, t2: float, t_size: int)
     if step_size is None:  
         return {}  
 
-    # Compute normalized step size based on time range and number of steps
+    # Compute step size based on time range and number of steps
+    # The step_size parameter acts as a divisor to scale the base interval
     computed_step_size = (t2 - t1) / t_size / step_size  
     return {"step_size": computed_step_size}  
 

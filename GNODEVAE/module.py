@@ -555,7 +555,7 @@ class FeatureDecoder(nn.Module):
             layers.append(nn.ReLU())  
 
         layers.append(nn.Linear(hidden_dim, input_dim))  
-        layers.append(nn.Softmax(dim=-1))  # Normalize gene expression
+        layers.append(nn.Softmax(dim=-1))  # Convert to probability distribution
 
         self.nn = nn.Sequential(*layers)  
         self.disp = nn.Parameter(torch.randn(input_dim))  
