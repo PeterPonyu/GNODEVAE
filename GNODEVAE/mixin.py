@@ -1,3 +1,17 @@
+"""
+Mixin Classes for GNODEVAE
+
+This module provides mixin classes that add specific functionality to the
+main agent and environment classes. Mixins follow the composition pattern
+to separate concerns and promote code reuse.
+
+Key Components:
+- scviMixin: Single-cell variational inference utilities
+- adjMixin: Adjacency matrix construction utilities  
+- envMixin: Environment management utilities
+- scMixin: Single-cell data preprocessing utilities
+"""
+
 import torch  
 import numpy as np  
 from sklearn.cluster import KMeans  
@@ -21,6 +35,17 @@ from anndata import AnnData
 import scanpy as sc
 
 class scviMixin:  
+    """
+    Mixin providing variational inference utilities for single-cell data.
+    
+    This mixin implements common probability distributions and loss functions
+    used in variational autoencoders for single-cell RNA-seq data, including:
+    - KL divergence between normal distributions
+    - Negative binomial log-likelihood for count data
+    
+    These methods are used to compute the VAE loss components.
+    """
+    
     def _normal_kl(  
         self,   
         mu1: torch.Tensor,   
@@ -28,24 +53,38 @@ class scviMixin:
         mu2: torch.Tensor,   
         lv2: torch.Tensor  
     ) -> torch.Tensor:  
-        """  
-        Compute the KL divergence between two normal distributions.  
-
+        """
+        Compute KL divergence between two normal distributions.
+        
+        Calculates KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)) analytically.
+        This is used as a regularization term in the VAE loss to encourage
+        the learned latent distribution to match a prior distribution
+        (typically N(0, I)).
+        
         Parameters  
         ----------  
         mu1 : torch.Tensor  
-            Mean of the first distribution.  
+            Mean of the first distribution, shape (batch_size, latent_dim).
         lv1 : torch.Tensor  
-            Log variance of the first distribution.  
+            Log variance of the first distribution, shape (batch_size, latent_dim).
         mu2 : torch.Tensor  
-            Mean of the second distribution.  
+            Mean of the second distribution (prior), shape (batch_size, latent_dim).
         lv2 : torch.Tensor  
-            Log variance of the second distribution.  
-
+            Log variance of the second distribution (prior).
+            
         Returns  
         -------  
         torch.Tensor  
-            KL divergence between the two distributions.  
+            KL divergence for each dimension, shape (batch_size, latent_dim).
+            Sum over the latent dimension to get total KL per sample.
+            
+        Notes
+        -----
+        The KL divergence is computed as:
+        KL = 0.5 * (log(σ2^2/σ1^2) + (σ1^2 + (μ1-μ2)^2)/σ2^2 - 1)
+        
+        For standard VAE with N(0,1) prior, this simplifies to:
+        KL = 0.5 * (μ^2 + σ^2 - log(σ^2) - 1)
         """  
         v1 = torch.exp(lv1)  
         v2 = torch.exp(lv2)  
@@ -61,24 +100,40 @@ class scviMixin:
         theta: torch.Tensor,   
         eps: float = 1e-8  
     ) -> torch.Tensor:  
-        """  
-        Compute the log likelihood of the negative binomial distribution.  
-
+        """
+        Compute log-likelihood of negative binomial distribution.
+        
+        The negative binomial (NB) distribution is commonly used to model
+        UMI count data in single-cell RNA-seq, as it can capture both the
+        mean-variance relationship and overdispersion in count data.
+        
         Parameters  
         ----------  
         x : torch.Tensor  
-            Observed data.  
+            Observed counts, shape (batch_size, num_genes).
         mu : torch.Tensor  
-            Mean of the distribution.  
+            Mean parameter of NB distribution, shape (batch_size, num_genes).
         theta : torch.Tensor  
-            Dispersion parameter of the distribution.  
-        eps : float, optional  
-            Small constant to avoid numerical instability, by default 1e-8.  
-
+            Dispersion parameter of NB distribution. Lower values indicate
+            higher overdispersion. Shape (num_genes,) or (batch_size, num_genes).
+        eps : float, default=1e-8
+            Small constant for numerical stability in logarithms.
+            
         Returns  
         -------  
         torch.Tensor  
-            Log likelihood of the negative binomial distribution.  
+            Log-likelihood for each gene count, shape (batch_size, num_genes).
+            
+        Notes
+        -----
+        The negative binomial distribution is parameterized as:
+        NB(x | μ, θ) with mean μ and variance μ + μ^2/θ
+        
+        The log-likelihood is:
+        log p(x|μ,θ) = log Γ(x+θ) - log Γ(θ) - log Γ(x+1) 
+                       + x*log(μ) + θ*log(θ) - (x+θ)*log(θ+μ)
+        
+        This is used as the reconstruction loss for count data.
         """  
         log_theta_mu_eps = torch.log(theta + mu + eps)  
         res = (  
@@ -92,6 +147,13 @@ class scviMixin:
 
 
 class adjMixin:  
+    """
+    Mixin providing adjacency matrix construction utilities.
+    
+    This mixin provides methods for building adjacency matrices from edge
+    representations, which is useful for loss computation and graph manipulation.
+    """
+    
     def _build_adj(  
         self,   
         edge_index: torch.Tensor,   

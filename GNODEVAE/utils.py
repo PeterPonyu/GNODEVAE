@@ -1,3 +1,15 @@
+"""
+Utility Functions for GNODEVAE
+
+This module provides utility classes for graph structure manipulation and
+decoding in GNODEVAE models. These utilities handle the conversion between
+different graph representations and enable flexible graph reconstruction.
+
+Key Components:
+- AdjToEdge: Convert adjacency matrices to edge index format
+- GraphStructureDecoder: Decode latent representations to graph structure
+"""
+
 import torch  
 import torch.nn as nn  
 from typing import Tuple, Union, Optional  
@@ -5,20 +17,58 @@ from torch_sparse import SparseTensor
 import numpy as np  
 
 class AdjToEdge:  
-    """  
-    Convert adjacency matrix to edge indices and weights for graph decoders.  
-
+    """
+    Convert adjacency matrix to edge index and weight format.
+    
+    This utility class handles the conversion of dense adjacency matrices
+    to the edge index format used by PyTorch Geometric. It supports various
+    operations including sparsification, symmetrization, and self-loop addition.
+    
+    The class is particularly useful for processing predicted adjacency matrices
+    from graph decoders, allowing control over graph sparsity and structure.
+    
     Parameters  
     ----------  
-    threshold : float, optional  
-        Probability threshold for edge existence, by default 0  
-    sparse_threshold : int, optional  
-        Maximum number of edges to keep per node, by default None  
-    symmetric : bool, optional  
-        Whether to ensure symmetric edges, by default True  
-    add_self_loops : bool, optional  
-        Whether to add self-loops, by default False  
+    threshold : float, default=0
+        Probability threshold for edge existence. Edges with weights below
+        this threshold are removed.
+    sparse_threshold : int, optional
+        Maximum number of edges to keep per node. If specified, only the
+        top-k edges for each node are retained, where k=sparse_threshold.
+    symmetric : bool, default=True
+        Whether to ensure symmetric edges. If True, edge weights are averaged
+        for bidirectional connections: w(i,j) = w(j,i) = (w(i,j) + w(j,i))/2.
+    add_self_loops : bool, default=False
+        Whether to add self-loops to the graph. Each node will have an edge
+        to itself with weight 1.0.
+        
+    Attributes
+    ----------
+    threshold : float
+        Edge probability threshold.
+    sparse_threshold : int or None
+        Sparsification parameter.
+    symmetric : bool
+        Whether to enforce symmetry.
+    add_self_loops : bool
+        Whether to add self-loops.
+        
+    Examples
+    --------
+    >>> converter = AdjToEdge(threshold=0.5, symmetric=True)
+    >>> adj = np.random.rand(100, 100)  # Predicted adjacency matrix
+    >>> edge_index, edge_weight = converter.convert(adj)
+    >>> print(f"Created {edge_index.shape[1]} edges")
+    
+    Notes
+    -----
+    The order of operations is:
+    1. Sparsification (if sparse_threshold is set)
+    2. Thresholding
+    3. Symmetrization (if symmetric=True)
+    4. Self-loop addition (if add_self_loops=True)
     """  
+    
     def __init__(  
         self,  
         threshold: float = 0,  
@@ -36,10 +86,29 @@ class AdjToEdge:
         adj: np.ndarray,  
         k: int  
     ) -> np.ndarray:  
-        """Keep top-k edges per node."""  
+        """
+        Keep only top-k edges per node.
+        
+        For each node, retains only the k edges with highest weights.
+        This helps control graph sparsity and computational complexity.
+        
+        Parameters
+        ----------
+        adj : np.ndarray
+            Adjacency matrix, shape (num_nodes, num_nodes).
+        k : int
+            Number of top edges to keep per node.
+            
+        Returns
+        -------
+        sparse_adj : np.ndarray
+            Sparsified adjacency matrix.
+        """  
         sparse_adj = np.zeros_like(adj)  
         for i in range(adj.shape[0]):  
+            # Find indices of top-k edge weights for node i
             top_k_idx = np.argpartition(adj[i], -k)[-k:]  
+            # Apply threshold filter to top-k edges
             mask = adj[i, top_k_idx] > self.threshold  
             sparse_adj[i, top_k_idx] = adj[i, top_k_idx] * mask  
         return sparse_adj  
@@ -49,17 +118,38 @@ class AdjToEdge:
         edge_index: np.ndarray,  
         edge_weight: np.ndarray  
     ) -> Tuple[np.ndarray, np.ndarray]:  
-        """Make edges symmetric by averaging weights of bidirectional edges."""  
+        """
+        Make edges symmetric by averaging bidirectional edge weights.
+        
+        Ensures that the graph is undirected by setting:
+        w(i,j) = w(j,i) = (w(i,j) + w(j,i)) / 2
+        
+        Parameters
+        ----------
+        edge_index : np.ndarray
+            Edge indices, shape (2, num_edges).
+        edge_weight : np.ndarray
+            Edge weights, shape (num_edges,).
+            
+        Returns
+        -------
+        edge_index : np.ndarray
+            Symmetrized edge indices.
+        edge_weight : np.ndarray
+            Symmetrized edge weights.
+        """  
         if edge_index.size == 0 or edge_weight.size == 0:  
             return np.zeros((2, 0), dtype=np.int64), np.array([], dtype=edge_weight.dtype)
+        
+        # Determine number of nodes
         n = max(edge_index[0].max(), edge_index[1].max()) + 1  
         adj = np.zeros((n, n))  
         adj[edge_index[0], edge_index[1]] = edge_weight  
         
-        # Symmetrize the adjacency matrix  
+        # Symmetrize by averaging
         adj = (adj + adj.T) / 2  
         
-        # Convert back to edge index and weight format  
+        # Convert back to edge format
         rows, cols = np.nonzero(adj)  
         edge_index = np.stack([rows, cols])  
         edge_weight = adj[rows, cols]  
@@ -72,7 +162,29 @@ class AdjToEdge:
         edge_weight: np.ndarray,  
         num_nodes: int  
     ) -> Tuple[np.ndarray, np.ndarray]:  
-        """Add self-loops to the graph."""  
+        """
+        Add self-loops to the graph.
+        
+        Creates edges from each node to itself with weight 1.0.
+        This can help with graph neural network training by ensuring
+        each node includes its own features in aggregation.
+        
+        Parameters
+        ----------
+        edge_index : np.ndarray
+            Edge indices, shape (2, num_edges).
+        edge_weight : np.ndarray
+            Edge weights, shape (num_edges,).
+        num_nodes : int
+            Total number of nodes.
+            
+        Returns
+        -------
+        edge_index : np.ndarray
+            Edge indices with self-loops added.
+        edge_weight : np.ndarray
+            Edge weights with self-loop weights (1.0) added.
+        """  
         self_loops = np.arange(num_nodes)  
         self_loops = np.stack([self_loops, self_loops])  
         
@@ -85,36 +197,47 @@ class AdjToEdge:
         self,  
         adj: np.ndarray  
     ) -> Tuple[np.ndarray, np.ndarray]:  
-        """  
-        Convert adjacency matrix to edge index and weights.  
-
+        """
+        Convert adjacency matrix to edge index and weights.
+        
+        Main conversion function that applies all configured operations:
+        sparsification, thresholding, symmetrization, and self-loop addition.
+        
         Parameters  
         ----------  
         adj : np.ndarray  
-            Adjacency matrix with edge probabilities (num_nodes, num_nodes)  
-
+            Adjacency matrix with edge probabilities, shape (num_nodes, num_nodes).
+            Values should be in [0, 1] for probabilistic edges.
+            
         Returns  
         -------  
         edge_index : np.ndarray  
-            Edge indices (2, num_edges)  
+            Edge indices in COO format, shape (2, num_edges).
+            edge_index[0] contains source nodes, edge_index[1] contains target nodes.
         edge_weight : np.ndarray  
-            Edge weights (num_edges,)  
+            Edge weights, shape (num_edges,).
+            
+        Examples
+        --------
+        >>> adj = np.array([[0, 0.8, 0.3], [0.8, 0, 0.9], [0.3, 0.9, 0]])
+        >>> converter = AdjToEdge(threshold=0.5)
+        >>> edge_index, edge_weight = converter.convert(adj)
         """  
-        # Sparsify if needed  
+        # Step 1: Sparsify if requested
         if self.sparse_threshold is not None:  
             adj = self._sparsify(adj, self.sparse_threshold)  
 
-        # Get edges above threshold  
+        # Step 2: Apply threshold and convert to edge format
         mask = adj > self.threshold  
         rows, cols = np.nonzero(mask)  
         edge_index = np.stack([rows, cols])  
         edge_weight = adj[rows, cols]  
 
-        # Symmetrize if needed  
+        # Step 3: Symmetrize if requested
         if self.symmetric:  
             edge_index, edge_weight = self._symmetrize(edge_index, edge_weight)  
 
-        # Add self-loops if needed  
+        # Step 4: Add self-loops if requested
         if self.add_self_loops:  
             edge_index, edge_weight = self._add_self_loops(  
                 edge_index, edge_weight, adj.shape[0]  
@@ -124,8 +247,13 @@ class AdjToEdge:
 
 
 class GraphStructureDecoder(nn.Module):  
-    """  
-    Combines structure decoder with edge conversion for graph reconstruction.  
+    """
+    Graph structure decoder with flexible conversion to edge format.
+    
+    This decoder combines a structure decoding network with edge conversion
+    utilities to produce graph representations in various formats. It wraps
+    one of the basic decoder types (MLP, Bilinear, InnerProduct) and provides
+    additional functionality for edge format conversion.  
     
     Parameters  
     ----------  
