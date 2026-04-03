@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+recursive-exclude GNODEVAE/CLEAR-main *
+recursive-exclude GNODEVAE/SC3-master *
+recursive-exclude GNODEVAE/scGCC-master *
+recursive-exclude GNODEVAE/scGNN-master *

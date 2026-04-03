@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnodevae"
+version = "0.0.1"
+description = "A Graph-Based ODE-VAE Enhances Clustering for Single-Cell Data"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Zeyu Fu", email = "fuzeyu99@126.com"},
+]
+keywords = ["single-cell", "graph-neural-network", "neural-ode", "variational-autoencoder", "bioinformatics"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+requires-python = ">=3.9"
+dependencies = [
+  "torch>=1.13.0",
+  "torch-geometric>=2.0.0",
+  "scanpy>=1.8.0",
+  "anndata>=0.8.0",
+  "numpy>=1.20.0",
+  "pandas>=1.3.0",
+  "scikit-learn>=1.0.0",
+  "tqdm>=4.60.0",
+  "psutil>=5.8.0",
+  "torchdiffeq>=0.2.0",
+]
+
+[tool.setuptools]
+packages = ["GNODEVAE"]
+
+[tool.setuptools.package-data]
+GNODEVAE = ["*.py"]
+
+[tool.setuptools.exclude-package-data]
+GNODEVAE = ["CLEAR-main/**", "SC3-master/**", "scGCC-master/**", "scGNN-master/**"]
+
+[project.urls]
+Homepage = "https://github.com/PeterPonyu/GNODEVAE"
+Source = "https://github.com/PeterPonyu/GNODEVAE"
+Issues = "https://github.com/PeterPonyu/GNODEVAE/issues"
