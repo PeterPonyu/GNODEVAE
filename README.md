@@ -6,13 +6,13 @@
 
 ## Introduction
 
-GNODEVAE is an innovative computational framework that integrates Graph Attention Networks (GAT), Neural Ordinary Differential Equations (NODE), and Variational Autoencoders (VAE). It addresses three critical challenges in single-cell RNA sequencing data analysis:
+GNODEVAE is a computational framework that integrates Graph Attention Networks (GAT), Neural Ordinary Differential Equations (NODE), and Variational Autoencoders (VAE). It addresses three challenges in single-cell RNA sequencing data analysis:
 
 1. Capturing complex topological relationships between cells
 2. Modeling continuous dynamic processes of cell differentiation
 3. Handling high levels of technical noise and biological variation
 
-This novel integration significantly improves the accurate identification of cell subpopulations, reconstruction of developmental trajectories, and understanding of cellular heterogeneity.
+This integration improves identification of cell subpopulations, reconstruction of developmental trajectories, and characterization of cellular heterogeneity.
 
 ## Key Contributions
 
@@ -28,9 +28,9 @@ Integration of neural ordinary differential equations transforms static represen
 
 The model's latent space effectively captures biological phenomena like varying rates of cell differentiation, while attention weights align with established developmental relationships between cell types.
 
-### 4. Comprehensive Benchmark Leadership
+### 4. Benchmark Results
 
-When compared with six advanced single-cell analysis methods (scVI, DIP-VAE, TC-VAE, β-VAE, Info-VAE, and scTour), GNODEVAE ranked first across all 13 test datasets, demonstrating exceptional versatility across diverse biological contexts.
+Compared with six single-cell analysis methods (scVI, DIP-VAE, TC-VAE, β-VAE, Info-VAE, and scTour), GNODEVAE ranked first across all 13 test datasets.
 
 ### 5. Superior Gene Trend Analysis Performance
 
@@ -252,7 +252,7 @@ If you use GNODEVAE in your research, please cite:
 ```bibtex
 @article{fu2025gnodevae,
   title={GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data},
-  author={Fu, Z. and Chen, C. and Wang, S. and others},
+  author={Fu, Zeyu and Chen, Chunlin and Wang, Song and others},
   journal={BMC Genomics},
   volume={26},
   pages={767},
