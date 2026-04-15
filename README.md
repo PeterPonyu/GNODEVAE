@@ -1,3 +1,9 @@
+<div align="center">
+  <a href="https://peterponyu.github.io/">
+    <img src="https://peterponyu.github.io/assets/badges/GNODEVAE.svg" width="64" alt="ZF Lab · GNODEVAE">
+  </a>
+</div>
+
 # GNODEVAE: A Graph-Based ODE-VAE Enhances Clustering of Single-Cell Data
 
 ## Graphical Abstract
@@ -269,6 +275,22 @@ Fu, Z., Chen, C., Wang, S. et al. GNODEVAE: a graph-based ODE-VAE enhances clust
 ## License
 
 See LICENSE file for details.
+
+## Examples (scripted) ✅
+
+Lightweight ordered Python scripts replace the previous notebook examples. See `examples/` for small smoke pipelines for data prep, training, and quick evaluation (fast defaults so you can run them locally).
+
+Example commands (from `GNODEVAE` root):
+
+```
+python examples/scripts/1_prepare.py
+python examples/scripts/2_train.py
+python examples/scripts/3_eval.py
+# or run orchestration
+python examples/run_all.py
+```
+
+**Notes:** outputs and intermediate artifacts are located under `examples/output/`.
 
 ## Contact
 
