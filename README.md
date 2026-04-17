@@ -1,9 +1,3 @@
-<div align="center">
-  <a href="https://peterponyu.github.io/">
-    <img src="https://peterponyu.github.io/assets/badges/GNODEVAE.svg" width="64" alt="ZF Lab · GNODEVAE">
-  </a>
-</div>
-
 # GNODEVAE: A Graph-Based ODE-VAE Enhances Clustering of Single-Cell Data
 
 ## Graphical Abstract
@@ -12,35 +6,35 @@
 
 ## Introduction
 
-GNODEVAE is a computational framework that integrates Graph Attention Networks (GAT), Neural Ordinary Differential Equations (NODE), and Variational Autoencoders (VAE). It addresses three challenges in single-cell RNA sequencing data analysis:
+GNODEVAE is a computational framework that integrates Graph Attention Networks (GAT), Neural Ordinary Differential Equations (NODE), and Variational Autoencoders (VAE). It targets three common challenges in single-cell RNA sequencing data analysis:
 
 1. Capturing complex topological relationships between cells
 2. Modeling continuous dynamic processes of cell differentiation
 3. Handling high levels of technical noise and biological variation
 
-This integration improves identification of cell subpopulations, reconstruction of developmental trajectories, and characterization of cellular heterogeneity.
+The integration is intended to support identification of cell subpopulations, reconstruction of developmental trajectories, and analysis of cellular heterogeneity.
 
 ## Key Contributions
 
 ### 1. Dynamic Attention Weighting for Biological Significance
 
-The GAT's attention mechanism adaptively weights gene expression profiles, prioritizing meaningful biological relationships while minimizing technical noise - particularly valuable for heterogeneous cell populations.
+The GAT attention mechanism adaptively weights gene expression profiles, prioritizing biological relationships while reducing technical noise in heterogeneous cell populations.
 
 ### 2. Continuous-Time Developmental Modeling via Neural ODEs
 
-Integration of neural ordinary differential equations transforms static representations into dynamic systems, with time variables providing natural parameterization of developmental processes and enabling predictions at any point in cellular development.
+Neural ordinary differential equations transform static representations into dynamic systems, with time variables providing a continuous parameterization of developmental processes.
 
 ### 3. Biologically Consistent Latent Space Representations
 
-The model's latent space effectively captures biological phenomena like varying rates of cell differentiation, while attention weights align with established developmental relationships between cell types.
+The model's latent space is designed to capture variation in cell differentiation rates, while attention weights can be inspected alongside known developmental relationships between cell types.
 
-### 4. Benchmark Results
+### 4. Benchmarking Summary
 
-Compared with six single-cell analysis methods (scVI, DIP-VAE, TC-VAE, β-VAE, Info-VAE, and scTour), GNODEVAE ranked first across all 13 test datasets.
+The accompanying study compares GNODEVAE with several single-cell analysis methods, including scVI, DIP-VAE, TC-VAE, beta-VAE, Info-VAE, and scTour, across 13 datasets.
 
-### 5. Superior Gene Trend Analysis Performance
+### 5. Gene Trend Analysis
 
-Quantitative evaluation shows GNODEVAE significantly outperforms existing methods (69.97% improvement over Palantir, 63.58% over Diffmap) in Calinski-Harabasz index, demonstrating clearer clustering and stronger category discrimination.
+The accompanying study also reports stronger Calinski-Harabasz scores than selected baselines for gene trend analysis.
         
 
 ## Installation
@@ -258,7 +252,7 @@ If you use GNODEVAE in your research, please cite:
 ```bibtex
 @article{fu2025gnodevae,
   title={GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data},
-  author={Fu, Zeyu and Chen, Chunlin and Wang, Song and others},
+  author={Fu, Z. and Chen, C. and Wang, S. and others},
   journal={BMC Genomics},
   volume={26},
   pages={767},
@@ -275,22 +269,6 @@ Fu, Z., Chen, C., Wang, S. et al. GNODEVAE: a graph-based ODE-VAE enhances clust
 ## License
 
 See LICENSE file for details.
-
-## Examples (scripted) ✅
-
-Lightweight ordered Python scripts replace the previous notebook examples. See `examples/` for small smoke pipelines for data prep, training, and quick evaluation (fast defaults so you can run them locally).
-
-Example commands (from `GNODEVAE` root):
-
-```
-python examples/scripts/1_prepare.py
-python examples/scripts/2_train.py
-python examples/scripts/3_eval.py
-# or run orchestration
-python examples/run_all.py
-```
-
-**Notes:** outputs and intermediate artifacts are located under `examples/output/`.
 
 ## Contact
 
