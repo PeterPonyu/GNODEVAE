@@ -252,7 +252,7 @@ If you use GNODEVAE in your research, please cite:
 ```bibtex
 @article{fu2025gnodevae,
   title={GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data},
-  author={Fu, Z. and Chen, C. and Wang, S. and others},
+  author={Fu, Zeyu and Chen, Chunlin and Wang, Song and Wang, Junping and Chen, Shilei},
   journal={BMC Genomics},
   volume={26},
   pages={767},

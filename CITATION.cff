@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article in preferred-citation."
+title: "GNODEVAE"
+type: software
+authors:
+  - family-names: "Fu"
+    given-names: "Zeyu"
+  - family-names: "Chen"
+    given-names: "Chunlin"
+  - family-names: "Wang"
+    given-names: "Song"
+  - family-names: "Wang"
+    given-names: "Junping"
+  - family-names: "Chen"
+    given-names: "Shilei"
+repository-code: "https://github.com/PeterPonyu/GNODEVAE"
+license: MIT
+preferred-citation:
+  type: article
+  title: "GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data"
+  authors:
+    - family-names: "Fu"
+      given-names: "Zeyu"
+    - family-names: "Chen"
+      given-names: "Chunlin"
+    - family-names: "Wang"
+      given-names: "Song"
+    - family-names: "Wang"
+      given-names: "Junping"
+    - family-names: "Chen"
+      given-names: "Shilei"
+  journal: "BMC Genomics"
+  volume: "26"
+  start: "767"
+  year: 2025
+  doi: "10.1186/s12864-025-11946-7"
