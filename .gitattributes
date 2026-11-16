@@ -1,0 +1,8 @@
+# Zenodo archives each release from GitHub's source zipball, which skips export-ignore paths.
+# These are datasets and result files bundled with the third-party comparison methods;
+# they stay in the repository but are left out of the release archive.
+GNODEVAE/CLEAR-main/**/*.h5ad export-ignore
+GNODEVAE/CLEAR-main/result/** export-ignore
+GNODEVAE/scGCC-master/data/** export-ignore
+GNODEVAE/scGNN-master/**/*.tar.gz export-ignore
+GNODEVAE/SC3-master/data/*.rda export-ignore
