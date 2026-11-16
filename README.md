@@ -1,8 +1,11 @@
 # GNODEVAE: A Graph-Based ODE-VAE Enhances Clustering of Single-Cell Data
 
+[![PyPI](https://img.shields.io/pypi/v/gnodevae.svg)](https://pypi.org/project/gnodevae/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15826042.svg)](https://doi.org/10.5281/zenodo.15826042)
+
 ## Graphical Abstract
 
-![GNODEVAE Graphical Abstract](gnodevae_abs.jpeg)
+![GNODEVAE Graphical Abstract](https://raw.githubusercontent.com/PeterPonyu/GNODEVAE/main/gnodevae_abs.jpeg)
 
 ## Introduction
 
@@ -41,9 +44,16 @@ The accompanying study also reports stronger Calinski-Harabasz scores than selec
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- PyTorch 1.12 or higher (with CUDA support recommended for GPU acceleration)
+- Python 3.9 or higher
+- PyTorch 1.13 or higher (with CUDA support recommended for GPU acceleration)
 - PyTorch Geometric
+- `torch-sparse`: imported by GNODEVAE but not installed by `pip install gnodevae`; install the build that matches your PyTorch and CUDA versions as described in the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)
+
+### Install from PyPI
+
+```bash
+pip install gnodevae
+```
 
 ### Install from Source
 
@@ -52,8 +62,8 @@ The accompanying study also reports stronger Calinski-Harabasz scores than selec
 git clone https://github.com/PeterPonyu/GNODEVAE.git
 cd GNODEVAE
 
-# Install dependencies
-pip install torch torch-geometric scanpy anndata numpy pandas scikit-learn tqdm psutil torchdiffeq
+# Install the package and its dependencies
+pip install -e .
 ```
 
 ### Dependencies
@@ -84,7 +94,7 @@ from GNODEVAE import agent  # Standard GraphVAE
 # Load your single-cell data
 adata = sc.read_h5ad('your_data.h5ad')
 
-# Initialize the GNODEVAE agent
+# Initialize the graph VAE agent (agent_r has no neural ODE component)
 model = agent_r(
     adata=adata,
     layer='counts',           # Layer containing count data
@@ -96,7 +106,6 @@ model = agent_r(
     encoder_type='graph',    # Use graph encoder
     graph_type='GAT',        # Graph Attention Network
     lr=1e-4,                 # Learning rate
-    device='cuda'            # Use GPU if available
 )
 
 # Train the model
@@ -167,12 +176,13 @@ latent = model.get_latent()
 - `device` (str or torch.device): Computing device - 'cuda' or 'cpu' (default: auto-detect)
 - `num_parts` (int): Number of graph partitions for mini-batch training (default: 10)
 
-### GNODEVAE-Specific Parameters (agent_r)
-- `n_ode_hidden` (int): Number of hidden units in ODE function (default: varies)
+### GNODEVAE-Specific Parameters (GNODEVAE_agent_r)
+- `ode_hidden_dim` (int): Hidden dimension of the latent ODE function (default: 25)
 - `w_recon` (float): Weight for reconstruction loss (default: 1.0)
-- `w_kl` (float): Weight for KL divergence loss (default: 1.0)
-- `w_adj` (float): Weight for adjacency matrix loss (default: 1.0)
-- `w_recon_ode` (float): Weight for ODE reconstruction loss (default: 1.0)
+- `w_kl` (float): Weight for KL divergence loss, applied on top of `beta` (default: 1.0)
+- `w_adj` (float): Weight for adjacency matrix loss, applied on top of `graph` (default: 1.0)
+- `w_recon_ode` (float): Weight for the reconstruction loss of expression decoded from the ODE latent states (default: 1.0)
+- `w_z_div` (float): Weight for the squared error between the encoder latent means and the ODE latent states (default: 1.0)
 
 ## Model Architecture
 
@@ -192,8 +202,8 @@ The model learns a low-dimensional latent representation that captures:
 
 After training, GNODEVAE produces:
 - **Latent representations**: Low-dimensional embeddings for each cell
-- **Clustering metrics**: ARI, NMI, Silhouette score, Calinski-Harabasz index, Davies-Bouldin index
-- **Pseudo-time**: Developmental trajectory information (for agent_r with ODE)
+- **Clustering metrics**: the training scores described under Evaluation Metrics
+- **Pseudo-time**: Developmental trajectory information (for GNODEVAE_agent_r, which has the ODE component)
 - **Graph structure**: Learned cell-cell similarity graph
 
 ## Advanced Usage
@@ -237,13 +247,13 @@ pseudotime_df = model.partition_time()
 
 ## Evaluation Metrics
 
-GNODEVAE automatically computes several clustering quality metrics during training:
-- **ARI** (Adjusted Rand Index): Measures clustering agreement with ground truth
-- **NMI** (Normalized Mutual Information): Information-theoretic clustering metric
-- **ASW** (Average Silhouette Width): Measures cluster separation
-- **C_H** (Calinski-Harabasz Index): Ratio of between-cluster to within-cluster variance
-- **D_B** (Davies-Bouldin Index): Average similarity between clusters
-- **P_C** (Pearson Correlation): Correlation between latent dimensions
+At every epoch, `agent`, `agent_r` and `GNODEVAE_agent_r` score the latent representation of all cells without using cell labels. Reference labels come from k-means clustering (`latent_dim` clusters) of the input feature matrix, computed once when the agent is created; the latent representation is clustered with k-means into the same number of clusters. For `GNODEVAE_agent_r`, the scored representation is `scale1 * latent + scale2 * odelatent`, the mix that `get_mix_latent()` returns (`scale1` and `scale2` default to 0.5). During `fit`, the progress bar shows each score averaged over the last `update_steps` epochs:
+- **ARI**: computed with `adjusted_mutual_info_score`, i.e. the adjusted mutual information between the reference labels and the latent clusters (not the adjusted Rand index)
+- **NMI**: normalized mutual information between the reference labels and the latent clusters
+- **ASW**: silhouette score of the latent clusters
+- **C_H**: Calinski-Harabasz score of the latent clusters
+- **D_B**: Davies-Bouldin score of the latent clusters (lower is better)
+- **P_C**: mean, over latent dimensions, of the summed absolute Pearson correlation with the other latent dimensions
 
 ## Citation
 
@@ -263,8 +273,6 @@ If you use GNODEVAE in your research, please cite:
 
 **Full Citation:**
 Fu, Z., Chen, C., Wang, S. et al. GNODEVAE: a graph-based ODE-VAE enhances clustering for single-cell data. BMC Genomics 26, 767 (2025). https://doi.org/10.1186/s12864-025-11946-7
-        
-[![DOI](https://zenodo.org/badge/988780888.svg)](https://doi.org/10.5281/zenodo.15826042)        
 
 ## License
 

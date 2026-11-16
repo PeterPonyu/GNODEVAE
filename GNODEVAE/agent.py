@@ -16,7 +16,7 @@ from anndata import AnnData
 import numpy as np
 import torch
 import tqdm
-from typing import Optional, Self
+from typing import Optional
 import time
 import psutil
 
@@ -48,7 +48,7 @@ class BaseAgent:
         epochs: int = 300,
         update_steps: int = 10,
         silent: bool = False,
-    ) -> Self:
+    ) -> "BaseAgent":
         """
         Train the model for a specified number of epochs.
         

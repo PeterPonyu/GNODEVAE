@@ -7,7 +7,7 @@ name = "gnodevae"
 version = "0.0.4"
 description = "A Graph-Based ODE-VAE Enhances Clustering for Single-Cell Data"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "MIT"}
 authors = [
   {name = "Zeyu Fu", email = "fuzeyu99@126.com"},
 ]
@@ -49,4 +49,5 @@ GNODEVAE = ["CLEAR-main/**", "SC3-master/**", "scGCC-master/**", "scGNN-master/*
 [project.urls]
 Homepage = "https://github.com/PeterPonyu/GNODEVAE"
 Source = "https://github.com/PeterPonyu/GNODEVAE"
+Paper = "https://doi.org/10.1186/s12864-025-11946-7"
 Issues = "https://github.com/PeterPonyu/GNODEVAE/issues"
