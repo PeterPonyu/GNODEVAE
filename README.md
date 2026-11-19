@@ -47,7 +47,7 @@ The accompanying study also reports stronger Calinski-Harabasz scores than selec
 - Python 3.9 or higher
 - PyTorch 1.13 or higher (with CUDA support recommended for GPU acceleration)
 - PyTorch Geometric
-- `torch-sparse`: imported by GNODEVAE but not installed by `pip install gnodevae`; install the build that matches your PyTorch and CUDA versions as described in the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)
+- A METIS backend, `pyg-lib` or `torch-sparse`, for training with `agent`, `agent_r` or `GNODEVAE_agent_r`: these split the cell graph with PyTorch Geometric's `ClusterData`, which needs one of the two. `pip install gnodevae` does not install them, because they are published as wheels for each PyTorch and CUDA version on the PyTorch Geometric wheel index rather than on PyPI. Install the build that matches your PyTorch and CUDA versions as described in the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html), for example `pip install pyg_lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html`. These wheels appear some time after each PyTorch release; if none exist yet for your PyTorch version, install the newest PyTorch version that has them. `GNODEVAE_agent_subgraph` samples subgraphs instead and needs neither, and the package imports without them.
 
 ### Install from PyPI
 

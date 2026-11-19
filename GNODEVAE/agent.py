@@ -12,6 +12,7 @@ Key Classes:
 """
 
 from .env import Env, Env_r
+from .utils import gpu_memory_mb
 from anndata import AnnData
 import numpy as np
 import torch
@@ -108,10 +109,7 @@ class BaseAgent:
                     process = psutil.Process()
                     cpu_memory = process.memory_info().rss / (1024 ** 2)  # MB
 
-                    if torch.cuda.is_available():
-                        gpu_memory = torch.cuda.memory_allocated(self.device) / (1024 ** 2)  # MB
-                    else:
-                        gpu_memory = 0.0
+                    gpu_memory = gpu_memory_mb(self.device)  # MB
 
                     self.resource.append((step_time, cpu_memory, gpu_memory))
 

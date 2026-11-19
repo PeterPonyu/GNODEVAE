@@ -12,11 +12,19 @@ Key Components:
 
 import torch  
 import torch.nn as nn  
-from typing import Tuple, Union, Optional  
-from torch_sparse import SparseTensor  
-import numpy as np  
+from typing import Tuple, Union, Optional
+import numpy as np
 
-class AdjToEdge:  
+
+def gpu_memory_mb(device) -> float:
+    """GPU memory allocated on ``device`` in MB; 0.0 for a CPU device or a machine without CUDA."""
+    device = torch.device(device)
+    if device.type != 'cuda' or not torch.cuda.is_available():
+        return 0.0
+    return torch.cuda.memory_allocated(device) / (1024 ** 2)
+
+
+class AdjToEdge:
     """
     Convert adjacency matrix to edge index and weight format.
     

@@ -1,4 +1,5 @@
 from .GODEVAE_env import GNODEVAE_Env_r, GNODEVAE_Env_Subgraph
+from .utils import gpu_memory_mb
 from anndata import AnnData
 import numpy as np
 import pandas as pd
@@ -50,7 +51,7 @@ class GNODEVAE_agent_base:
                     # Resource tracking
                     process = psutil.Process()
                     cpu_mem = process.memory_info().rss / (1024 ** 2)
-                    gpu_mem = torch.cuda.memory_allocated(self.device) / (1024 ** 2) if torch.cuda.is_available() else 0.0
+                    gpu_mem = gpu_memory_mb(self.device)
                     self.resource.append((step_end_time - step_start_time, cpu_mem, gpu_mem))
 
                     if (i + 1) % update_steps == 0:
